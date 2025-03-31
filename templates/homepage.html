@@ -4,163 +4,15 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AirSync</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='homepage.css') }}">
         <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
         <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-        <style>
-            /* Add this new style for the header */
-            .header-container {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 15px;
-                margin-bottom: 20px;
-            }
-            .logo {
-                height: 100px;  /* Adjust based on your logo's aspect ratio */
-                width: auto;
-            }
-            .tagline {
-                margin: 0;
-                font-size: 1.8rem;
-                background: linear-gradient(#000000, #000000);
-                -webkit-background-clip: text;
-                background-clip: text;
-                color: transparent;
-            }
-
-            /* Rest of your existing styles... */
-            body {
-                font-family: Arial, sans-serif;
-                background: linear-gradient(to right, #e3f2fd, #ffaf80);
-                margin: 20px;
-                text-align: center;
-            }
-        
-            table {
-                width: 90%;
-                margin: auto;
-                border-collapse: collapse;
-                margin-top: 20px;
-                background: white;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            }
-            th, td {
-                padding: 15px;
-                text-align: center;
-                border-bottom: 1px solid #ddd;
-            }
-            th {
-                background-color: #ff624a;
-                color: white;
-            }
-            tr:hover {
-                background-color: #f1f1f1;
-                transition: 0.3s;
-            }
-            .alert {
-                color: red;
-                font-weight: bold;
-            }
-            .refresh-btn {
-                padding: 10px 20px;
-                background-color: #ff624a;
-                color: white;
-                border: none;
-                cursor: pointer;
-                margin-bottom: 20px;
-                border-radius: 5px;
-                transition: 0.3s;
-            }
-            .refresh-btn:hover {
-                background-color: #ff482b;
-            }
-            .popup-overlay {
-             display: none;
-             position: fixed;
-             top: 0; left: 0;
-             width: 100%; height: 100%;
-             background: rgba(0, 0, 0, 0.5);
-            }
-            .popup {
-                display: none;
-                position: fixed;
-                left: 50%; top: 50%;
-                transform: translate(-50%, -50%);
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0px 0px 15px rgba(0,0,0,0.2);
-                text-align: center;
-                min-width: 250px;
-            }
-            .popup button {
-                margin-top: 10px;
-                padding: 8px 15px;
-                border: none;
-                background: #d32f2f;
-                color: white;
-                cursor: pointer;
-                border-radius: 5px;
-                transition: 0.3s;
-            }
-            .popup button:hover {
-                background: #b71c1c;
-            }
-
-        </style>
     </head>
     <body>
         <div class="header-container">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="AirSync Logo" class="logo">
-        <h1 class="tagline">Air, Sync, Done.</h1>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="AirSync Logo" class="logo">
+            <h1 class="tagline">Air, Sync, Done.</h1>
         </div>
-
-        <script>
-            function refreshData() {
-                location.reload();
-            }
-
-            function showPopup(temp, hum, time) {
-                let status = getWeatherStatus(temp);
-                let action = getActionStatus(temp);
-                document.getElementById("popup-text").innerHTML = `
-                    <strong>Temperature:</strong> ${temp}°C 🌡️<br>
-                    <strong>Humidity:</strong> ${hum}% 💧<br>
-                    <strong>Timestamp:</strong> ${time}<br>
-                    <strong>Weather Status:</strong> ${status}<br>
-                    <strong>Recommended Action:</strong> ${action}
-                `;
-                document.getElementById("popup-overlay").style.display = "block";
-                document.getElementById("popup").style.display = "block";
-            }
-
-            function closePopup() {
-                document.getElementById("popup-overlay").style.display = "none";
-                document.getElementById("popup").style.display = "none";
-            }
-
-            function getWeatherStatus(temp) {
-                if (temp < 10) return "🧊🥶 freezing/cold";
-                if (temp >= 10 && temp < 18) return "❄️🍃 Slightly chilly";
-                if (temp >= 18 && temp < 26) return "⛅👍🏻 Moderate/Comfortable";
-                if (temp >= 26 && temp < 32) return "☀️ Slightly warm";
-                if (temp >= 32) return "🔥♨️ burning/hot";
-            
-            }
-
-            function getActionStatus(temp) {
-                if (temp < 10) return "Stay inside, keep warm!";
-                if (temp >= 10 && temp < 18) return "Have some warm drinks!";
-                if (temp >= 18 && temp < 26) return "Perfect time for outing!";
-                if (temp >= 26 && temp < 32) return "stay hydrated, grab a soda!";
-                if (temp >= 32) return "Cold showers and fan+ice bowl will do the trick!";
-            }
-
-        </script>
-
-
         <button class="refresh-btn" onclick="refreshData()">Refresh</button>
         <table>
 
@@ -205,6 +57,6 @@
             </form>
             <p><small>Only upload .bin files from Arduino IDE's "Sketch > Export Compiled Binary"</small></p>
         </div>
-
+        <script src="{{ url_for('static', filename='homepage.js') }}"></script>
     </body>
 </html>
