@@ -1,15 +1,20 @@
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for, session
 from datetime import datetime
 import sqlite3
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
 
 app = Flask(__name__)
+app.secret_key = 'd7a8f9b3e4c5a6b7c8d9e0f1a2b3c4d5'
+app.config['PERMANENT_SESSION_LIFETIME']
 
 # Configuration
 DATABASE = 'sensor_data.db'
 FIRMWARE_FOLDER = 'firmware'
 ALLOWED_EXTENSIONS = {'bin'}
 update_available = False
+PASSWORD_HASH = generate_password_hash('admin123')
 
 # Ensure directories exist
 os.makedirs(FIRMWARE_FOLDER, exist_ok=True)
@@ -29,8 +34,6 @@ def init_db():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# Initialize database
 init_db()
 
 # -------------------- OTA Endpoints --------------------
@@ -59,13 +62,40 @@ def upload_firmware():
         return 'Firmware uploaded successfully', 200
     return 'Invalid file type (only .bin allowed)', 400
 
-# -------------------- Existing Endpoints --------------------
+# --------------------login Endpoints --------------------
+@app.route('/')
+def index():
+    # If user is already logged in, redirect to home
+    if 'logged_in' in session and session['logged_in']:
+        return redirect(url_for('home'))
+    return render_template('index.html')
+
+@app.route('/login', methods=['POST'])
+def login():
+    password = request.form.get('password')
+    
+    if password and check_password_hash(PASSWORD_HASH, password):
+        session['logged_in'] = True
+        session.permanent = True
+        return redirect(url_for('home'))
+    else:
+        return render_template('index.html', error="Invalid password"), 401
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('index'))
+
+# -------------------- Remaining Endpoints --------------------
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-@app.route('/')
+@app.route('/home')
 def home():
+    if 'logged_in' not in session or not session['logged_in']:
+        return redirect(url_for('index'))
+    
     try:
         with sqlite3.connect(DATABASE) as conn:
             conn.row_factory = sqlite3.Row
@@ -73,7 +103,7 @@ def home():
             cursor.execute('SELECT * FROM readings ORDER BY timestamp DESC LIMIT 10')
             data = cursor.fetchall()
             
-        return render_template('index.html', data=data)
+        return render_template('homepage.html', data=data)
     except Exception as e:
         print(f"Error in home route: {str(e)}")
         return "Internal Server Error", 500
