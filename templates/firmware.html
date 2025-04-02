@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firmware Upload</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='firmware.css') }}">
+
+    
+</head>
+<body>
+    <div class="navbar">
+        <a href="{{ url_for('home') }}">Home</a>
+        <a href="{{ url_for('firmware') }}">Firmware</a>
+        <a href="{{ url_for('aboutus') }}">About Us</a>
+        <a href="{{ url_for('logout') }}" class="logoutbutton">Log out</a>
+    </div>
+
+    <div class="container">
+        <h1>Firmware Upload</h1>
+        <p class="subtitle">Update your device with the latest firmware</p>
+
+        <div class="upload-section">
+            <div class="instructions">
+                <strong>Instructions:</strong>
+                <ul>
+                    <li>Upload a valid <strong>.bin</strong> file.</li>
+                    <li>Generate the file using <strong>Arduino IDE</strong>:</li>
+                    <ul>
+                        <li>Go to <strong>Sketch</strong> → <strong>Export Compiled Binary</strong></li>
+                        <li>Find the `.bin` file in your project folder</li>
+                    </ul>
+                    <li>Click upload to flash the firmware.</li>
+                    <li><strong>Warning:</strong> Uploading will reboot the device.</li>
+                </ul>
+            </div>
+
+            <form action="/upload-firmware" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".bin" required>
+                <br><br>
+                <button type="submit" class="upload-btn">Upload Firmware</button>
+            </form>
+        </div>
+    </div>
+    <div id="upload-popup" class="upload-popup" style="display: none;">
+        <div class="popup-content">
+            <p>Successfully uploaded, please wait a moment for the device to reboot</p>
+            <button onclick="hideUploadPopup()">OK</button>
+        </div>
+    </div>
+    <script>
+        function showUploadPopup() {
+            document.getElementById('upload-popup').style.display = 'block';
+        }
+        
+        function hideUploadPopup() {
+            document.getElementById('upload-popup').style.display = 'none';
+        }
+        
+        // Handle form submission with AJAX
+        document.querySelector('form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Add confirmation dialog
+            if (!confirm('WARNING: Uploading firmware will reboot the device. Continue?')) {
+            return;}
+
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/upload-firmware', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showUploadPopup();
+                } else {
+                    alert('Upload failed: ' + await response.text());
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
