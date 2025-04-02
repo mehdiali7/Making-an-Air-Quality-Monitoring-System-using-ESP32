@@ -1,19 +1,22 @@
 from flask import Flask, request, render_template, send_from_directory, redirect, url_for, session
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta
 
 app = Flask(__name__)
 app.secret_key = 'd7a8f9b3e4c5a6b7c8d9e0f1a2b3c4d5'
-app.config['PERMANENT_SESSION_LIFETIME']
+app.config.update(
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30) if os.environ.get('REMEMBER_ME') else timedelta(minutes=30),
+    SESSION_REFRESH_EACH_REQUEST=True)
 
 # Configuration
 DATABASE = 'sensor_data.db'
 FIRMWARE_FOLDER = 'firmware'
 ALLOWED_EXTENSIONS = {'bin'}
-update_available = False
+class OTAState:
+    update_available = False
+    last_update = None
 PASSWORD_HASH = generate_password_hash('admin123')
 
 # Ensure directories exist
@@ -39,9 +42,8 @@ init_db()
 # -------------------- OTA Endpoints --------------------
 @app.route('/check-update')
 def check_update():
-    global update_available
-    if update_available:
-        update_available = False
+    if OTAState.update_available:
+        OTAState.update_available = False  # Reset after checking
         return "update_available", 200
     return "no_update", 200
 
@@ -49,18 +51,45 @@ def check_update():
 def serve_firmware():
     return send_from_directory(FIRMWARE_FOLDER, 'firmware.bin')
 
+
 @app.route('/upload-firmware', methods=['POST'])
 def upload_firmware():
-    global update_available
     if 'file' not in request.files:
         return 'No file uploaded', 400
     
     file = request.files['file']
+    if file.filename == '':
+        return 'No selected file', 400
+        
     if file and allowed_file(file.filename):
-        file.save(os.path.join(FIRMWARE_FOLDER, 'firmware.bin'))
-        update_available = True
-        return 'Firmware uploaded successfully', 200
+        try:
+            filepath = os.path.join(FIRMWARE_FOLDER, 'firmware.bin')
+            print(f"Saving to: {filepath}")  # Debug
+            
+            # Save original file size for verification
+            original_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
+            
+            file.save(filepath)
+            
+            
+            OTAState.update_available = True
+            OTAState.last_update = datetime.now()
+            print(f"Update marked as available at {OTAState.last_update}")
+            return '', 200
+        except Exception as e:
+            print(f"Error saving file: {str(e)}")
+            return f'Upload failed: {str(e)}', 500
+            
     return 'Invalid file type (only .bin allowed)', 400
+
+@app.route('/update-status')
+def update_status():
+    return {
+        'update_available': OTAState.update_available,
+        'last_update': OTAState.last_update.isoformat() if OTAState.last_update else None,
+        'firmware_size': os.path.getsize(os.path.join(FIRMWARE_FOLDER, 'firmware.bin')) 
+            if os.path.exists(os.path.join(FIRMWARE_FOLDER, 'firmware.bin')) else 0
+              }
 
 # --------------------login Endpoints --------------------
 @app.route('/')
@@ -73,10 +102,19 @@ def index():
 @app.route('/login', methods=['POST'])
 def login():
     password = request.form.get('password')
+    remember = request.form.get('remember') == 'on'  # Check if checkbox was checked
     
     if password and check_password_hash(PASSWORD_HASH, password):
         session['logged_in'] = True
-        session.permanent = True
+        session.permanent = remember  # Only make session permanent if "remember me" is checked
+        
+        if remember:
+            # Set longer session lifetime for "remember me"
+            app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+        else:
+            # Normal session timeout
+            app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+            
         return redirect(url_for('home'))
     else:
         return render_template('index.html', error="Invalid password"), 401
@@ -132,6 +170,19 @@ def save_data():
     except Exception as e:
         print(f"Error saving data: {str(e)}")
         return "Internal Server Error", 500
+    
+# -------------------- Navbar page Routes --------------------
+@app.route('/firmware')
+def firmware():
+    if 'logged_in' not in session or not session['logged_in']:
+        return redirect(url_for('index'))
+    return render_template('firmware.html')
+
+@app.route('/aboutus')
+def aboutus():
+    if 'logged_in' not in session or not session['logged_in']:
+        return redirect(url_for('index'))
+    return render_template('aboutus.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003)
